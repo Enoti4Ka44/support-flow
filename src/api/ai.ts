@@ -1,6 +1,9 @@
-import { GoogleGenAI, Type } from '@google/genai';
+import { GoogleGenAI, Type } from "@google/genai";
 
-export async function categorizeTicketWithAI(title: string, description: string) {
+export async function categorizeTicketWithAI(
+  title: string,
+  description: string,
+) {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const prompt = `
@@ -38,26 +41,39 @@ export async function categorizeTicketWithAI(title: string, description: string)
             priority: {
               type: Type.STRING,
               description: "Приоритет: low, medium или high",
-              enum: ["low", "medium", "high"]
+              enum: ["low", "medium", "high"],
             },
             category: {
               type: Type.STRING,
-              description: "Категория: hardware, network, access_rights, software, billing, consultation, security, other",
-              enum: ["hardware", "network", "access_rights", "software", "billing", "consultation", "security", "other"]
+              description:
+                "Категория: hardware, network, access_rights, software, billing, consultation, security, other",
+              enum: [
+                "hardware",
+                "network",
+                "access_rights",
+                "software",
+                "billing",
+                "consultation",
+                "security",
+                "other",
+              ],
             },
             ai_response: {
               type: Type.STRING,
-              description: "Ответ службы поддержки пользователю"
-            }
+              description: "Ответ службы поддержки пользователю",
+            },
           },
-          required: ["priority", "category", "ai_response"]
-        }
-      }
+          required: ["priority", "category", "ai_response"],
+        },
+      },
     });
 
     let rawText = (response.text || "").trim();
-    if (rawText.startsWith('\`\`\`')) {
-      rawText = rawText.replace(/^\`\`\`(?:json)?\n?/i, '').replace(/\n?\`\`\`$/i, '').trim();
+    if (rawText.startsWith("\`\`\`")) {
+      rawText = rawText
+        .replace(/^\`\`\`(?:json)?\n?/i, "")
+        .replace(/\n?\`\`\`$/i, "")
+        .trim();
     }
     return JSON.parse(rawText);
   } catch (error) {
@@ -65,7 +81,36 @@ export async function categorizeTicketWithAI(title: string, description: string)
     return {
       priority: "medium",
       category: "other",
-      ai_response: `(AI Error: ${errorMessage}) Спасибо за обращение. Мы рассмотрим вашу заявку.`
+      ai_response: `(AI Error: ${errorMessage}) Спасибо за обращение. Мы рассмотрим вашу заявку.`,
     };
+  }
+}
+
+export async function generateDashboardAnalytics(stats: any) {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+    const prompt = `
+    Ты - крутой продуктовый ИИ-аналитик. У нас есть HelpDesk система (система заявок).
+    
+    Вот текущая статистика по заявкам:
+    ${JSON.stringify(stats, null, 2)}
+    
+    Дай мне:
+    1) Краткий инсайт по нагрузке, распределению приоритетов и категориям.
+    2) Рекомендацию для поддержки (на что обратить внимание, может быть проблема с какой-то конкретной категорией?).
+    3) Краткий комментарий по SLA (если есть просроченные заявки).
+    
+    Пиши лаконично (не больше 3-4 абзацев), профессионально, но понятно. Избегай Markdown форматирования кроме жирного шрифта (**текст**).
+    `;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+    });
+
+    return response.text?.trim() || "Нет данных для генерации аналитики.";
+  } catch (error) {
+    const err = error instanceof Error ? error.message : String(error);
+    return `Ошибка AI Аналитики: ${err}`;
   }
 }
