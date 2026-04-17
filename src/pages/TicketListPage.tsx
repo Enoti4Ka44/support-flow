@@ -2,6 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { TicketList } from "../components/TicketList";
 import { ticketApi } from "../api/tickets";
 import type { Ticket } from "../types/ticket";
+import { timeAgo } from "../utils/date-formatter";
+import { span } from "motion/react-client";
 
 export function TicketListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -27,8 +29,6 @@ export function TicketListPage() {
     }
   };
 
-  console.log(tickets);
-
   const filteredTickets = useMemo(() => {
     return tickets.filter((ticket) => {
       const matchSearch =
@@ -45,6 +45,19 @@ export function TicketListPage() {
     });
   }, [tickets, search, statusFilter, priorityFilter, categoryFilter]);
 
+  const oldestTicket = useMemo(() => {
+    const openTickets = tickets.filter((t) => t.status === "open");
+
+    if (openTickets.length === 0) return null;
+
+    return openTickets.reduce((oldest, current) => {
+      const currentTime = new Date(current.created_at + "Z").getTime();
+      const oldestTime = new Date(oldest.created_at + "Z").getTime();
+
+      return currentTime < oldestTime ? current : oldest;
+    });
+  }, [tickets]);
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in h-full">
       <header className="flex justify-between items-center w-full">
@@ -54,7 +67,7 @@ export function TicketListPage() {
       <div className="grid grid-cols-4 gap-4">
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            Unassigned
+            Открытые
           </div>
           <div className="text-[24px] font-semibold">
             {tickets.filter((t) => t.status === "open").length}
@@ -62,7 +75,7 @@ export function TicketListPage() {
         </div>
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            In Progress
+            В процессе
           </div>
           <div className="text-[24px] font-semibold">
             {tickets.filter((t) => t.status === "in_progress").length}
@@ -70,13 +83,13 @@ export function TicketListPage() {
         </div>
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            Avg. AI Accuracy
+            Средняя точность ИИ
           </div>
           <div className="text-[24px] font-semibold">94.2%</div>
         </div>
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            Route Latency
+            Задержка сети
           </div>
           <div className="text-[24px] font-semibold">0.8s</div>
         </div>
@@ -138,30 +151,70 @@ export function TicketListPage() {
           onRefresh={loadTickets}
         />
 
-        <div className="w-[280px] bg-accent/5 border border-dashed border-accent rounded-xl p-5 flex flex-col gap-3 shrink-0">
-          <div className="text-[13px] font-semibold flex items-center gap-2 text-accent">
-            <span>✨</span> AI Routing Insights
+        <div className="w-0.2 bg-accent/5 border border-dashed border-accent rounded-xl p-5 flex flex-col gap-3  overflow-y-auto">
+          <div className="text-md font-semibold flex items-center gap-2 text-accent">
+            <span>✨</span> Краткая статистика
           </div>
           <p className="text-[12px] text-text-secondary">
             Last Processed: <b>#T-Latest</b>
           </p>
-          <div className="text-[12px] leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
-            <b>Analysis:</b>
+          <div className="text-sm leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
+            <b>Сводка:</b>
             <br />
-            Real-time ai categorizer active.
+            Всего заявок: {tickets.length}
             <br />
-            <br />
-            <b>Classification:</b>
-            <br />
-            - Tags issues directly.
-            <br />
-            - Maps priority automatically.
+            Открытые: {tickets.filter((t) => t.status === "open").length}
+            <br />В работе:{" "}
+            {tickets.filter((t) => t.status === "in_progress").length}
             <br />
             <br />
-            <b>Action:</b>
+            <b>Приоритеты:</b>
             <br />
-            Routing to designated tier lists.
+            High: {tickets.filter((t) => t.priority === "high").length}
+            <br />
+            Medium: {tickets.filter((t) => t.priority === "medium").length}
+            <br />
+            Low: {tickets.filter((t) => t.priority === "low").length}
+            <br />
+            <br />
+            <b>Фокус:</b>
+            <br />
+            {oldestTicket
+              ? `Самая старая заявка #T-${oldestTicket.id} (${timeAgo(oldestTicket.created_at)})`
+              : "Нет открытых заявок"}
           </div>
+          {/* <div className="text-[12px] leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
+            <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
+              Открытые заявки
+            </div>
+            <div className="text-[24px] font-semibold">
+              {tickets.filter((t) => t.status === "open").length}
+            </div>
+          </div>
+          <div className="text-[12px] leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
+            <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
+              Заявки в процессе решения
+            </div>
+            <div className="text-2xl font-semibold">
+              {tickets.filter((t) => t.status === "in_progress").length}
+            </div>
+          </div>
+          <div className="leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
+            <div className="text-xs text-text-secondary uppercase tracking-[0.5px] mb-2">
+              Самая старая заявка
+            </div>
+            {oldestTicket ? (
+              <div className="text-xl font-semibold flex justify-between gap-4 items-end">
+                #T-{oldestTicket.id}
+                <span className="font-bold text-xs leading-relaxed text-text-secondary">
+                  {timeAgo(oldestTicket.created_at)}
+                </span>
+              </div>
+            ) : (
+              <div className="font-extrabold text-xl text-center">—</div>
+            )}
+          </div> */}
+
           <div className="mt-auto border-t border-border-dark pt-3">
             <div className="text-[10px] text-text-secondary uppercase tracking-[0.5px] mb-1">
               Auto-tagging load
