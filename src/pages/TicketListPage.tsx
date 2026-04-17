@@ -223,7 +223,7 @@ export function TicketListPage() {
           <p className="text-[12px] text-text-secondary">
             Последний решенный:{" "}
             <b>
-              {lastClosedTicket ? `#T-${lastClosedTicket.id}` : "Нет закрытых"}
+              {lastClosedTicket ? `#T-${lastClosedTicket.id}` : "Нет решенных"}
             </b>
           </p>
           <div className="text-sm leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark whitespace-normal">
