@@ -1,5 +1,5 @@
-import { TicketCard } from './TicketCard';
-import type { Ticket } from '../types/ticket';
+import { TicketCard } from "./TicketCard";
+import type { Ticket } from "../types/ticket";
 
 interface TicketListProps {
   tickets: Ticket[];
@@ -8,7 +8,12 @@ interface TicketListProps {
   onRefresh?: () => void;
 }
 
-export function TicketList({ tickets, loading, error, onRefresh }: TicketListProps) {
+export function TicketList({
+  tickets,
+  loading,
+  error,
+  onRefresh,
+}: TicketListProps) {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20 animate-fade-in flex-grow">
@@ -28,7 +33,7 @@ export function TicketList({ tickets, loading, error, onRefresh }: TicketListPro
           <div>
             <p className="text-red-400 font-medium">{error}</p>
             {onRefresh && (
-              <button 
+              <button
                 onClick={onRefresh}
                 className="text-red-300 text-sm hover:underline mt-1 focus:outline-none"
               >
@@ -45,30 +50,46 @@ export function TicketList({ tickets, loading, error, onRefresh }: TicketListPro
     return (
       <div className="text-center py-20 bg-bg-card rounded-2xl border border-dashed border-border-dark animate-fade-in flex-grow">
         <div className="text-5xl mb-4 text-text-secondary">📭</div>
-        <p className="text-text-primary text-lg font-medium">Заявок не найдено</p>
-        <p className="text-text-secondary mt-1">Они появятся здесь после создания</p>
+        <p className="text-text-primary text-lg font-medium">
+          Заявок не найдено
+        </p>
+        <p className="text-text-secondary mt-1">
+          Они появятся здесь после создания
+        </p>
       </div>
     );
   }
 
   return (
-    <div className="bg-bg-card border border-border-dark rounded-xl flex-grow flex flex-col overflow-y-auto w-full">
-      <table className="w-full border-collapse text-left">
-        <thead>
-          <tr>
-            <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">Ticket</th>
-            <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">Subject</th>
-            <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">AI Tagging</th>
-            <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">Priority</th>
-            <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tickets.map((ticket, index) => (
-            <TicketCard key={ticket.id} ticket={ticket} />
-          ))}
-        </tbody>
-      </table>
+    <div className="bg-bg-card border border-border-dark rounded-xl flex-grow overflow-x-auto w-full relative">
+      <div className="min-w-[800px]">
+        <table className="w-full border-collapse text-left">
+          <thead>
+            <tr>
+              <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">
+                Тикет
+              </th>
+              <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">
+                Название
+              </th>
+              <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">
+                AI Тег
+              </th>
+              <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">
+                Приоритет
+              </th>
+              <th className="bg-white/5 px-5 py-3 text-[12px] font-semibold text-text-secondary uppercase border-b border-border-dark">
+                Статус
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {tickets.map((ticket, index) => (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

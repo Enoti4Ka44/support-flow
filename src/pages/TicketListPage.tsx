@@ -3,7 +3,8 @@ import { TicketList } from "../components/TicketList";
 import { ticketApi } from "../api/tickets";
 import type { Ticket } from "../types/ticket";
 import { timeAgo } from "../utils/date-formatter";
-import { span } from "motion/react-client";
+import { b, p, span } from "motion/react-client";
+import { Sparkles } from "lucide-react";
 
 export function TicketListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -58,27 +59,91 @@ export function TicketListPage() {
     });
   }, [tickets]);
 
+  const slaRiskCount = useMemo(() => {
+    const now = new Date().getTime();
+    return tickets.filter((t) => {
+      if (t.status === "closed") return false;
+      const createdTime = new Date(t.created_at + "Z").getTime();
+      const diffMins = (now - createdTime) / 60000;
+      if (t.priority === "high" && 15 > diffMins && diffMins > 10) return true; // SLA is 15
+      if (t.priority === "medium" && 60 > diffMins && diffMins > 45)
+        return true; // SLA is 60
+      if (t.priority === "low" && 1440 > diffMins && diffMins > 1380)
+        return true; // SLA is 1440 (24h)
+      return false;
+    }).length;
+  }, [tickets]);
+
+  const overdueCount = useMemo(() => {
+    const now = new Date().getTime();
+
+    return tickets.filter((t) => {
+      if (t.status === "closed") return false;
+
+      const createdTime = new Date(t.created_at + "Z").getTime();
+      const diffMins = (now - createdTime) / 60000;
+
+      if (t.priority === "high" && diffMins > 15) return true;
+      if (t.priority === "medium" && diffMins > 60) return true;
+      if (t.priority === "low" && diffMins > 1440) return true;
+
+      return false;
+    }).length;
+  }, [tickets]);
+
+  const systemLoadInfo = useMemo(() => {
+    const openTickets = tickets.filter((t) => t.status !== "closed");
+    let loadValue = 0;
+    openTickets.forEach((t) => {
+      if (t.priority === "high") loadValue += 3;
+      else if (t.priority === "medium") loadValue += 2;
+      else loadValue += 1;
+    });
+    // Let's say ~30 points is 100% load
+    const percentage = Math.min(100, Math.round((loadValue / 30) * 100));
+    return percentage;
+  }, [tickets]);
+
+  const lastClosedTicket = useMemo(() => {
+    const closedTickets = tickets.filter((t) => t.status === "closed");
+
+    if (closedTickets.length === 0) return null;
+
+    return closedTickets.reduce((latest, current) => {
+      const currentTime = new Date(current.created_at + "Z").getTime();
+      const latestTime = new Date(latest.created_at + "Z").getTime();
+
+      return currentTime > latestTime ? current : latest;
+    });
+  }, [tickets]);
+
   return (
     <div className="flex flex-col gap-6 animate-fade-in h-full">
       <header className="flex justify-between items-center w-full">
         <h1 className="text-xl font-semibold">Обзор заявок</h1>
       </header>
 
-      <div className="grid grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            Открытые
+            SLA Risk
           </div>
-          <div className="text-[24px] font-semibold">
-            {tickets.filter((t) => t.status === "open").length}
+          <div className="text-[24px] font-semibold text-red-400">
+            {slaRiskCount}
+          </div>
+          <div className="text-[11px] text-text-secondary mt-1">
+            Заявки близки к просрочке
           </div>
         </div>
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
           <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-            В процессе
+            Просроченные
           </div>
-          <div className="text-[24px] font-semibold">
-            {tickets.filter((t) => t.status === "in_progress").length}
+          <div className="text-[24px] font-semibold text-red-400">
+            {overdueCount}
+          </div>
+          <div className="text-[11px] text-text-secondary mt-1">
+            Нарушен SLA
           </div>
         </div>
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl">
@@ -98,7 +163,7 @@ export function TicketListPage() {
       <div className="flex flex-wrap items-center gap-4">
         <input
           type="text"
-          placeholder="Search tickets by ID, user or tag..."
+          placeholder="Поиск тикетов по названию..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           className="bg-bg-card border border-border-dark px-4 py-2 rounded-lg w-[300px] text-text-secondary text-[13px] outline-none focus:border-accent"
@@ -109,7 +174,7 @@ export function TicketListPage() {
           onChange={(e) => setStatusFilter(e.target.value)}
           className="bg-bg-card border border-border-dark px-4 py-2 rounded-lg text-text-secondary text-[13px] outline-none focus:border-accent"
         >
-          <option value="all">Status: All</option>
+          <option value="all">Статус: Все</option>
           <option value="open">Open</option>
           <option value="in_progress">In Progress</option>
           <option value="closed">Closed</option>
@@ -120,7 +185,7 @@ export function TicketListPage() {
           onChange={(e) => setPriorityFilter(e.target.value)}
           className="bg-bg-card border border-border-dark px-4 py-2 rounded-lg text-text-secondary text-[13px] outline-none focus:border-accent"
         >
-          <option value="all">Priority: All</option>
+          <option value="all">Приоритет: Все</option>
           <option value="high">High</option>
           <option value="medium">Medium</option>
           <option value="low">Low</option>
@@ -131,7 +196,7 @@ export function TicketListPage() {
           onChange={(e) => setCategoryFilter(e.target.value)}
           className="bg-bg-card border border-border-dark px-4 py-2 rounded-lg text-text-secondary text-[13px] outline-none focus:border-accent"
         >
-          <option value="all">Category: All</option>
+          <option value="all">Категория: Все</option>
           <option value="hardware">Hardware</option>
           <option value="network">Network</option>
           <option value="access_rights">Access Rights</option>
@@ -143,7 +208,7 @@ export function TicketListPage() {
         </select>
       </div>
 
-      <div className="flex-1 flex gap-5 overflow-hidden">
+      <div className="flex-1 flex flex-col lg:flex-row gap-5 ">
         <TicketList
           tickets={filteredTickets}
           loading={loading}
@@ -151,14 +216,17 @@ export function TicketListPage() {
           onRefresh={loadTickets}
         />
 
-        <div className="w-0.2 bg-accent/5 border border-dashed border-accent rounded-xl p-5 flex flex-col gap-3  overflow-y-auto">
+        <div className="w-full lg:w-[280px] shrink-0 bg-accent/5 border border-dashed border-accent rounded-xl p-5 flex flex-col gap-3 overflow-y-auto custom-scrollbar">
           <div className="text-md font-semibold flex items-center gap-2 text-accent">
-            <span>✨</span> Краткая статистика
+            <Sparkles className="w-5 h-5" /> Краткая статистика
           </div>
           <p className="text-[12px] text-text-secondary">
-            Last Processed: <b>#T-Latest</b>
+            Последний решенный:{" "}
+            <b>
+              {lastClosedTicket ? `#T-${lastClosedTicket.id}` : "Нет закрытых"}
+            </b>
           </p>
-          <div className="text-sm leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
+          <div className="text-sm leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark whitespace-normal">
             <b>Сводка:</b>
             <br />
             Всего заявок: {tickets.length}
@@ -179,48 +247,28 @@ export function TicketListPage() {
             <br />
             <b>Фокус:</b>
             <br />
-            {oldestTicket
-              ? `Самая старая заявка #T-${oldestTicket.id} (${timeAgo(oldestTicket.created_at)})`
-              : "Нет открытых заявок"}
-          </div>
-          {/* <div className="text-[12px] leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
-            <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-              Открытые заявки
-            </div>
-            <div className="text-[24px] font-semibold">
-              {tickets.filter((t) => t.status === "open").length}
-            </div>
-          </div>
-          <div className="text-[12px] leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
-            <div className="text-[12px] text-text-secondary uppercase tracking-[0.5px] mb-2">
-              Заявки в процессе решения
-            </div>
-            <div className="text-2xl font-semibold">
-              {tickets.filter((t) => t.status === "in_progress").length}
-            </div>
-          </div>
-          <div className="leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark">
-            <div className="text-xs text-text-secondary uppercase tracking-[0.5px] mb-2">
-              Самая старая заявка
-            </div>
             {oldestTicket ? (
-              <div className="text-xl font-semibold flex justify-between gap-4 items-end">
-                #T-{oldestTicket.id}
-                <span className="font-bold text-xs leading-relaxed text-text-secondary">
-                  {timeAgo(oldestTicket.created_at)}
-                </span>
-              </div>
+              <p>
+                Самый старый открытый тикет:{" "}
+                <b>
+                  #T-{oldestTicket.id} ({timeAgo(oldestTicket.created_at)})
+                </b>
+              </p>
             ) : (
-              <div className="font-extrabold text-xl text-center">—</div>
+              "Нет открытых заявок"
             )}
-          </div> */}
+          </div>
 
           <div className="mt-auto border-t border-border-dark pt-3">
-            <div className="text-[10px] text-text-secondary uppercase tracking-[0.5px] mb-1">
-              Auto-tagging load
+            <div className="text-[10px] text-text-secondary uppercase tracking-[0.5px] mb-1 flex justify-between">
+              <span>Загруженность системы</span>
+              <span>{systemLoadInfo}%</span>
             </div>
             <div className="h-1 bg-border-dark rounded-sm w-full overflow-hidden">
-              <div className="w-[65%] h-full bg-accent rounded-sm"></div>
+              <div
+                className={`h-full rounded-sm transition-all duration-500 ${systemLoadInfo > 80 ? "bg-red-500" : systemLoadInfo > 50 ? "bg-yellow-500" : "bg-accent"}`}
+                style={{ width: `${systemLoadInfo}%` }}
+              ></div>
             </div>
           </div>
         </div>

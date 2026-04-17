@@ -62,13 +62,24 @@ export function TicketCard({
   const category = categoryLabels[ticket.category] || categoryLabels.other;
 
   // Overdue logic: High priority, open/in_progress, > 15 mins old
-  const isOverdue =
-    ticket.priority === "high" &&
-    ticket.status !== "closed" &&
-    new Date().getTime() - new Date(ticket.created_at + "Z").getTime() >
-      15 * 60 * 1000;
+  const SLA_MINUTES = {
+    high: 15,
+    medium: 60,
+    low: 1440,
+  };
 
-  console.log(new Date().getTime(), new Date(ticket.created_at).getTime());
+  const isOverdue = (() => {
+    if (ticket.status === "closed") return false;
+
+    const createdTime = new Date(ticket.created_at + "Z").getTime();
+    const now = new Date().getTime();
+    const diffMins = (now - createdTime) / 60000;
+
+    const limit =
+      SLA_MINUTES[ticket.priority as keyof typeof SLA_MINUTES] || 60;
+
+    return diffMins > limit;
+  })();
   return (
     <tr
       onClick={() => navigate(`/tickets/${ticket.id}`)}
@@ -86,7 +97,7 @@ export function TicketCard({
             {new Date(ticket.created_at + "Z").toLocaleString("ru-RU")}
             {isOverdue && (
               <span className="text-red-400 ml-2 font-medium">
-                ⚠️ Просрочена (&gt;15 мин)
+                ⚠️ Просрочена (&gt; {SLA_MINUTES[ticket.priority]}мин)
               </span>
             )}
           </span>

@@ -70,7 +70,7 @@ export function DashboardPage() {
     const overdueHighPriority = tickets.filter((t) => {
       if (t.status === "closed") return false;
       if (t.priority !== "high") return false;
-      const createdTime = new Date(t.created_at + "Z").getTime();
+      const createdTime = new Date(t.created_at).getTime();
       return now - createdTime > 15 * 60 * 1000;
     });
 
@@ -88,8 +88,8 @@ export function DashboardPage() {
       .forEach((t) => {
         if (!t.closed_at) return;
 
-        const created = new Date(t.created_at + "Z").getTime();
-        const closed = new Date(t.closed_at + "Z").getTime();
+        const created = new Date(t.created_at).getTime();
+        const closed = new Date(t.closed_at).getTime();
         const diffMins = Math.max(0, (closed - created) / 60000);
 
         totalClosedDelayMin += diffMins;
@@ -168,8 +168,7 @@ export function DashboardPage() {
     const datesMap: Record<string, number> = {};
     const sorted = [...tickets].sort(
       (a, b) =>
-        new Date(a.created_at + "Z").getTime() -
-        new Date(b.created_at + "Z").getTime(),
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     sorted.forEach((t) => {
       const d = new Date(t.created_at).toISOString().split("T")[0];
@@ -236,7 +235,7 @@ export function DashboardPage() {
         )}
       </div>
 
-      <div className="grid grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <div className="bg-bg-card border border-border-dark p-4 rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
           <div className="text-[11px] text-text-secondary uppercase tracking-[0.5px] mb-2 font-semibold">
             Всего заявок
@@ -283,7 +282,7 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-[350px]">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 h-[1000px] md:h-[350px]">
         {/* Priority Chart */}
         <div className="bg-bg-card border border-border-dark rounded-xl p-5 flex flex-col shadow-sm">
           <h3 className="text-[13px] font-semibold mb-4 text-text-secondary uppercase tracking-[0.5px]">
@@ -353,7 +352,7 @@ export function DashboardPage() {
                   paddingAngle={3}
                   dataKey="count"
                   label={({ name, percent }) =>
-                    `${name} (${(percent * 100).toFixed(0)}%)`
+                    `${name} (${(percent!! * 100).toFixed(0)}%)`
                   }
                   labelLine={{ stroke: "#8b949e", strokeWidth: 1 }}
                 >
