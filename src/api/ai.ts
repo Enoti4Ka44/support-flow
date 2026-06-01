@@ -1,3 +1,4 @@
+"use server";
 import { GoogleGenAI, Type } from "@google/genai";
 
 export async function categorizeTicketWithAI(
@@ -31,7 +32,7 @@ export async function categorizeTicketWithAI(
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -77,11 +78,11 @@ export async function categorizeTicketWithAI(
     }
     return JSON.parse(rawText);
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error("AI Error:", error);
     return {
       priority: "medium",
       category: "other",
-      ai_response: `(AI Error: ${errorMessage}) Спасибо за обращение. Мы рассмотрим вашу заявку.`,
+      ai_response: "Служба AI временно недоступна. Ваша заявка принята и будет рассмотрена специалистом.",
     };
   }
 }
@@ -104,13 +105,13 @@ export async function generateDashboardAnalytics(stats: any) {
     `;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3-flash-preview",
+      model: "gemini-2.5-flash",
       contents: prompt,
     });
 
     return response.text?.trim() || "Нет данных для генерации аналитики.";
   } catch (error) {
-    const err = error instanceof Error ? error.message : String(error);
-    return `Ошибка AI Аналитики: ${err}`;
+    console.error("AI Error:", error);
+    return "Служба AI временно недоступна. Пожалуйста, проверьте настройки API ключа или повторите попытку позже.";
   }
 }

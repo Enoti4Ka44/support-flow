@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Ticket, CreateTicketPayload, UpdateStatusPayload } from '../types/ticket';
+import type { Ticket, CreateTicketPayload, UpdateStatusPayload } from '@/types/ticket';
 
 const api = axios.create({
   baseURL: '/api',

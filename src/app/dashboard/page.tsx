@@ -1,7 +1,8 @@
+"use client";
 import { useState, useEffect, useMemo } from "react";
-import { ticketApi } from "../api/tickets";
-import { generateDashboardAnalytics } from "../api/ai";
-import type { Ticket } from "../types/ticket";
+import { ticketApi } from "@/api/tickets";
+import { generateDashboardAnalytics } from "@/api/ai";
+import type { Ticket } from "@/types/ticket";
 import {
   BarChart,
   Bar,
@@ -44,7 +45,7 @@ const formatDuration = (mins: number) => {
   return `${h} ч ${m} мин`;
 };
 
-export function DashboardPage() {
+export default function DashboardPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [aiInsight, setAiInsight] = useState<string | null>(null);

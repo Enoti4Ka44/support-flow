@@ -1,7 +1,8 @@
+"use client";
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import { ticketApi } from "../api/tickets";
-import type { Ticket } from "../types/ticket";
+import { useParams, useRouter } from "next/navigation";
+import { ticketApi } from "@/api/tickets";
+import type { Ticket } from "@/types/ticket";
 import { MoveLeft, Trash2 } from "lucide-react";
 
 const statusConfig = {
@@ -54,12 +55,15 @@ const categoryLabels: Record<string, { label: string; colorClass: string }> = {
 };
 
 export function TicketDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const params = useParams();
+  const id = params?.id as string;
+  const router = useRouter();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [updating, setUpdating] = useState(false);
+
+  const [showConfirmDelete, setShowConfirmDelete] = useState(false);
 
   useEffect(() => {
     loadTicket();
@@ -91,11 +95,11 @@ export function TicketDetail() {
   };
 
   const handleDelete = async () => {
-    if (!ticket || !window.confirm("Удалить эту заявку?")) return;
+    if (!ticket) return;
     setUpdating(true);
     try {
       await ticketApi.delete(ticket.id);
-      navigate("/tickets");
+      router.push("/tickets");
     } catch {
       setError("Не удалось удалить заявку");
       setUpdating(false);
@@ -118,7 +122,7 @@ export function TicketDetail() {
           {error || "Заявка не найдена"}
         </p>
         <button
-          onClick={() => navigate("/tickets")}
+          onClick={() => router.push("/tickets")}
           className="mt-4 btn-secondary"
         >
           <MoveLeft />
@@ -135,7 +139,7 @@ export function TicketDetail() {
   return (
     <div className="max-w-3xl mx-auto animate-fade-in w-full text-text-primary">
       <button
-        onClick={() => navigate("/tickets")}
+        onClick={() => router.push("/tickets")}
         className="cursor-pointer flex items-center gap-2 text-text-secondary hover:text-text-primary mb-6 transition-colors font-medium outline-none"
       >
         <MoveLeft />
@@ -237,14 +241,34 @@ export function TicketDetail() {
       </div>
 
       <div className="mt-8 flex justify-end">
-        <button
-          onClick={handleDelete}
-          disabled={updating}
-          className="cursor-pointer flex items-center gap-2 px-4 py-2 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-xl text-[14px] font-medium transition-colors disabled:opacity-50 outline-none"
-        >
-          <Trash2 />
-          Удалить тикет
-        </button>
+        {!showConfirmDelete ? (
+          <button
+            onClick={() => setShowConfirmDelete(true)}
+            disabled={updating}
+            className="cursor-pointer flex items-center gap-2 px-4 py-2 hover:bg-red-500/20 text-text-secondary hover:text-red-400 rounded-xl text-[14px] font-medium transition-colors disabled:opacity-50 outline-none"
+          >
+            <Trash2 />
+            Удалить тикет
+          </button>
+        ) : (
+          <div className="flex items-center gap-3 animate-fade-in bg-red-500/10 p-2 rounded-xl border border-red-500/20">
+            <span className="text-red-400 text-[13px] font-medium px-2">Уверены?</span>
+            <button
+              onClick={() => setShowConfirmDelete(false)}
+              disabled={updating}
+              className="cursor-pointer px-3 py-1.5 hover:bg-white/10 text-text-secondary rounded-lg text-[13px] transition-colors outline-none"
+            >
+              Отмена
+            </button>
+            <button
+              onClick={handleDelete}
+              disabled={updating}
+              className="cursor-pointer px-3 py-1.5 bg-red-500/20 hover:bg-red-500/30 text-red-400 font-medium rounded-lg text-[13px] transition-colors outline-none"
+            >
+              Да, удалить
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

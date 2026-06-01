@@ -1,12 +1,13 @@
+"use client";
 import { useState, useEffect, useMemo } from "react";
-import { TicketList } from "../components/TicketList";
-import { ticketApi } from "../api/tickets";
-import type { Ticket } from "../types/ticket";
-import { timeAgo } from "../utils/date-formatter";
+import { TicketList } from "@/components/TicketList";
+import { ticketApi } from "@/api/tickets";
+import type { Ticket } from "@/types/ticket";
+import { timeAgo } from "@/utils/date-formatter";
 import { b, p, span } from "motion/react-client";
 import { Sparkles } from "lucide-react";
 
-export function TicketListPage() {
+export default function TicketListPage() {
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,8 +53,8 @@ export function TicketListPage() {
     if (openTickets.length === 0) return null;
 
     return openTickets.reduce((oldest, current) => {
-      const currentTime = new Date(current.created_at + "Z").getTime();
-      const oldestTime = new Date(oldest.created_at + "Z").getTime();
+      const currentTime = new Date(current.created_at).getTime();
+      const oldestTime = new Date(oldest.created_at).getTime();
 
       return currentTime < oldestTime ? current : oldest;
     });
@@ -63,7 +64,7 @@ export function TicketListPage() {
     const now = new Date().getTime();
     return tickets.filter((t) => {
       if (t.status === "closed") return false;
-      const createdTime = new Date(t.created_at + "Z").getTime();
+      const createdTime = new Date(t.created_at).getTime();
       const diffMins = (now - createdTime) / 60000;
       if (t.priority === "high" && 15 > diffMins && diffMins > 10) return true; // SLA is 15
       if (t.priority === "medium" && 60 > diffMins && diffMins > 45)
@@ -80,7 +81,7 @@ export function TicketListPage() {
     return tickets.filter((t) => {
       if (t.status === "closed") return false;
 
-      const createdTime = new Date(t.created_at + "Z").getTime();
+      const createdTime = new Date(t.created_at).getTime();
       const diffMins = (now - createdTime) / 60000;
 
       if (t.priority === "high" && diffMins > 15) return true;
@@ -110,8 +111,8 @@ export function TicketListPage() {
     if (closedTickets.length === 0) return null;
 
     return closedTickets.reduce((latest, current) => {
-      const currentTime = new Date(current.created_at + "Z").getTime();
-      const latestTime = new Date(latest.created_at + "Z").getTime();
+      const currentTime = new Date(current.created_at).getTime();
+      const latestTime = new Date(latest.created_at).getTime();
 
       return currentTime > latestTime ? current : latest;
     });
@@ -223,7 +224,7 @@ export function TicketListPage() {
           <p className="text-[12px] text-text-secondary">
             Последний решенный:{" "}
             <b>
-              {lastClosedTicket ? `#T-${lastClosedTicket.id}` : "Нет решенных"}
+              {lastClosedTicket ? `#T-${lastClosedTicket.id}` : "Нет закрытых"}
             </b>
           </p>
           <div className="text-sm leading-relaxed text-text-secondary bg-black/20 p-3 rounded-lg border border-border-dark whitespace-normal">

@@ -1,6 +1,7 @@
-import { CreateTicketForm } from '../components/CreateTicketForm';
+"use client";
+import { CreateTicketForm } from "@/components/CreateTicketForm";
 
-export function CreateTicketPage() {
+export default function CreateTicketPage() {
   return (
     <div className="max-w-xl w-full mx-auto animate-fade-in">
       <h1 className="text-xl font-semibold mb-6">Создать заявку</h1>

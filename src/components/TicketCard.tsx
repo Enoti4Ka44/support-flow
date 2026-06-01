@@ -1,5 +1,6 @@
-import { useNavigate } from "react-router-dom";
-import type { Ticket } from "../types/ticket";
+"use client";
+import { useRouter } from "next/navigation";
+import type { Ticket } from "@/types/ticket";
 
 const statusConfig = {
   open: { bg: "bg-white/10", text: "text-text-primary", label: "Open" },
@@ -57,7 +58,7 @@ export function TicketCard({
   ticket: Ticket;
   [key: string]: any;
 }) {
-  const navigate = useNavigate();
+  const router = useRouter();
   const status = statusConfig[ticket.status] || statusConfig.open;
   const category = categoryLabels[ticket.category] || categoryLabels.other;
 
@@ -71,7 +72,7 @@ export function TicketCard({
   const isOverdue = (() => {
     if (ticket.status === "closed") return false;
 
-    const createdTime = new Date(ticket.created_at + "Z").getTime();
+    const createdTime = new Date(ticket.created_at).getTime();
     const now = new Date().getTime();
     const diffMins = (now - createdTime) / 60000;
 
@@ -82,7 +83,7 @@ export function TicketCard({
   })();
   return (
     <tr
-      onClick={() => navigate(`/tickets/${ticket.id}`)}
+      onClick={() => router.push(`/tickets/${ticket.id}`)}
       className={`cursor-pointer transition-colors border-b border-border-dark ${isOverdue ? "bg-red-500/10 hover:bg-red-500/20" : "hover:bg-white/5"}`}
     >
       <td className="px-5 py-4 text-[14px]">
@@ -94,7 +95,7 @@ export function TicketCard({
         <div className="flex flex-col gap-1">
           <span>{ticket.title}</span>
           <span className="text-[11px] text-text-secondary">
-            {new Date(ticket.created_at + "Z").toLocaleString("ru-RU")}
+            {new Date(ticket.created_at).toLocaleString("ru-RU")}
             {isOverdue && (
               <span className="text-red-400 ml-2 font-medium">
                 ⚠️ Просрочена (&gt; {SLA_MINUTES[ticket.priority]}мин)

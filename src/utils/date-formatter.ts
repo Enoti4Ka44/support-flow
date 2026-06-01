@@ -1,5 +1,5 @@
 export function timeAgo(dateString: string) {
-  const diffMs = Date.now() - new Date(dateString + "Z").getTime();
+  const diffMs = Date.now() - new Date(dateString).getTime();
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);

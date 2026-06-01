@@ -1,11 +1,12 @@
+"use client";
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ticketApi } from "../api/tickets";
-import { categorizeTicketWithAI } from "../api/ai";
+import { useRouter } from "next/navigation";
+import { ticketApi } from "@/api/tickets";
+import { categorizeTicketWithAI } from "@/api/ai";
 import { Send } from "lucide-react";
 
 export function CreateTicketForm() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [loading, setLoading] = useState(false);
@@ -28,7 +29,7 @@ export function CreateTicketForm() {
         category: aiResult.category,
         ai_response: aiResult.ai_response,
       });
-      navigate("/tickets");
+      router.push("/tickets");
     } catch {
       setError("Не удалось создать заявку. Попробуйте ещё раз.");
     } finally {
