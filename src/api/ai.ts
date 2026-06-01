@@ -1,117 +1,123 @@
 "use server";
-import { GoogleGenAI, Type } from "@google/genai";
-
+import OpenAI from "openai";
+const ai = new OpenAI({
+  apiKey: process.env.OPENROUTER_API_KEY,
+  baseURL: "https://openrouter.ai/api/v1",
+});
+function extractJson(text: string) {
+  let cleaned = text.trim();
+  if (cleaned.startsWith("```")) {
+    cleaned = cleaned
+      .replace(/^```(?:json)?\n?/i, "")
+      .replace(/\n?```$/i, "")
+      .trim();
+  }
+  const firstBrace = cleaned.indexOf("{");
+  const lastBrace = cleaned.lastIndexOf("}");
+  if (firstBrace !== -1 && lastBrace !== -1) {
+    cleaned = cleaned.slice(firstBrace, lastBrace + 1);
+  }
+  return JSON.parse(cleaned);
+}
 export async function categorizeTicketWithAI(
   title: string,
   description: string,
 ) {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    const prompt = `
-    У нас есть система заявок (HelpDesk).
-    Определи ПРИОРИТЕТ и КАТЕГОРИЮ для следующей заявки:
-    Заголовок: "${title}"
-    Описание: "${description}"
-
-    Приоритет должен быть одним из: "low", "medium", "high".
-    - high: срочно, авария, критическая ошибка, система лежит
-    - medium: проблема мешает работе, но не блокирует ее полностью
-    - low: запрос доступов, консультация, нет срочности
-
-    Категория (Тегирование) должна быть одной из: "hardware", "network", "access_rights", "software", "billing", "consultation", "security", "other".
-    - hardware: проблемы с оборудованием (ПК, принтер, монитор сломался)
-    - network: нет интернета, недоступна сеть, обрыв связи, vpn
-    - access_rights: доступ к папке, забыл пароль, сброс пароля, выдать права
-    - software: ошибки в программах, установка ПО, 1С, Office
-    - billing: вопросы по оплате, счетам, тарифным планам
-    - consultation: общий вопрос, консультация по услугам
-    - security: подозрение на вирус, фишинг, утечка данных, инцидент ИБ
-    - other: другое (не подходит под остальные категории)
-
-    Создай короткий вежливый ответ от лица саппорта для клиента (заготовленное сообщение об обработке заявки) в зависимости от приоритета и ситуации.
-    `;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            priority: {
-              type: Type.STRING,
-              description: "Приоритет: low, medium или high",
-              enum: ["low", "medium", "high"],
-            },
-            category: {
-              type: Type.STRING,
-              description:
-                "Категория: hardware, network, access_rights, software, billing, consultation, security, other",
-              enum: [
-                "hardware",
-                "network",
-                "access_rights",
-                "software",
-                "billing",
-                "consultation",
-                "security",
-                "other",
-              ],
-            },
-            ai_response: {
-              type: Type.STRING,
-              description: "Ответ службы поддержки пользователю",
-            },
-          },
-          required: ["priority", "category", "ai_response"],
+    const prompt = ` У нас есть система заявок (HelpDesk). Определи ПРИОРИТЕТ и КАТЕГОРИЮ для следующей заявки. Заголовок: "${title}" Описание: "${description}" Приоритет должен быть одним из: - low - medium - high Правила: - high: срочно, авария, критическая ошибка, система лежит - medium: проблема мешает работе, но не блокирует ее полностью - low: запрос доступов, консультация, нет срочности Категория должна быть одной из: - hardware - network - access_rights - software - billing - consultation - security - other Правила категорий: - hardware: проблемы с ПК, принтером, монитором и другим оборудованием - network: интернет, сеть, VPN - access_rights: права доступа, пароли - software: ошибки ПО, установка программ - billing: вопросы оплаты - consultation: консультации - security: вирусы, фишинг, ИБ-инциденты - other: другое Также сформируй короткий вежливый ответ службы поддержки. Верни ТОЛЬКО JSON следующего формата: { "priority": "medium", "category": "software", "ai_response": "Текст ответа" } `;
+    const completion = await ai.chat.completions.create({
+      model: "openrouter/owl-alpha",
+      temperature: 0.2,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Отвечай только валидным JSON без markdown, комментариев и пояснений.",
         },
-      },
+        { role: "user", content: prompt },
+      ],
     });
-
-    let rawText = (response.text || "").trim();
-    if (rawText.startsWith("\`\`\`")) {
-      rawText = rawText
-        .replace(/^\`\`\`(?:json)?\n?/i, "")
-        .replace(/\n?\`\`\`$/i, "")
-        .trim();
-    }
-    return JSON.parse(rawText);
+    const text = completion.choices[0].message.content ?? "";
+    return extractJson(text);
   } catch (error) {
     console.error("AI Error:", error);
     return {
       priority: "medium",
       category: "other",
-      ai_response: "Служба AI временно недоступна. Ваша заявка принята и будет рассмотрена специалистом.",
+      ai_response:
+        "Служба AI временно недоступна. Ваша заявка принята и будет рассмотрена специалистом.",
     };
   }
 }
-
 export async function generateDashboardAnalytics(stats: any) {
   try {
-    const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
     const prompt = `
-    Ты - крутой продуктовый ИИ-аналитик. У нас есть HelpDesk система (система заявок).
-    
-    Вот текущая статистика по заявкам:
-    ${JSON.stringify(stats, null, 2)}
-    
-    Дай мне:
-    1) Краткий инсайт по нагрузке, распределению приоритетов и категориям.
-    2) Рекомендацию для поддержки (на что обратить внимание, может быть проблема с какой-то конкретной категорией?).
-    3) Краткий комментарий по SLA (если есть просроченные заявки).
-    
-    Пиши лаконично (не больше 3-4 абзацев), профессионально, но понятно. Избегай Markdown форматирования кроме жирного шрифта (**текст**).
-    `;
+          Ты — senior продуктовый аналитик и эксперт по HelpDesk системам.
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
+          Твоя задача — проанализировать статистику заявок и дать управленческие выводы, которые можно сразу использовать в работе команды поддержки.
+
+          Вот данные:
+          ${JSON.stringify(stats, null, 2)}
+
+          ---
+
+          Сформируй ответ строго по структуре:
+
+          1) КЛЮЧЕВОЙ ИНСАЙТ
+          - Опиши главное, что происходит в системе сейчас (1–2 предложения)
+          - Укажи, есть ли перегрузка системы или отдельных направлений
+          - Если есть аномалии (например, много high приоритетов) — обязательно укажи
+
+          2) АНАЛИЗ ПРОБЛЕМНЫХ ОБЛАСТЕЙ
+          - Какие категории или типы заявок создают больше всего нагрузки
+          - Где возможен источник проблем (например: network или software)
+          - Есть ли дисбаланс (например, много low заявок, но мало high или наоборот)
+          - Если можно — укажи возможные причины (предположения допустимы)
+
+          3) РЕКОМЕНДАЦИИ ДЛЯ КОМАНДЫ ПОДДЕРЖКИ
+          Дай конкретные действия:
+          - что нужно оптимизировать
+          - что стоит автоматизировать
+          - где нужно усилить команду или процесс
+          - какие категории требуют внимания в первую очередь
+
+          Формат: только список действий
+
+          4) SLA И РИСКИ
+          - Есть ли риск нарушения SLA
+          - Есть ли просроченные заявки (если видно по данным)
+          - Какие последствия это может вызвать
+          - Что сделать прямо сейчас для снижения рисков
+
+          ---
+
+          ⚠️ ВАЖНО:
+          - Пиши строго по делу
+          - Без воды и общих фраз
+          - Без Markdown
+          - Не используй эмодзи
+          - Между названием пункта и описанием не должно быть пустого пространства.
+          - Максимум 3–4 абзацев суммарно
+          `;
+
+    const completion = await ai.chat.completions.create({
+      model: "openrouter/owl-alpha",
+      temperature: 0.4,
+      messages: [
+        {
+          role: "system",
+          content:
+            "Ты опытный аналитик службы поддержки. Пиши кратко и профессионально.",
+        },
+        { role: "user", content: prompt },
+      ],
     });
-
-    return response.text?.trim() || "Нет данных для генерации аналитики.";
+    return (
+      completion.choices[0].message.content?.trim() ||
+      "Нет данных для генерации аналитики."
+    );
   } catch (error) {
     console.error("AI Error:", error);
-    return "Служба AI временно недоступна. Пожалуйста, проверьте настройки API ключа или повторите попытку позже.";
+    return "Служба AI временно недоступна. Проверьте API-ключ OpenRouter или повторите попытку позже.";
   }
 }
